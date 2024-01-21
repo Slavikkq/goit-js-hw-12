@@ -1,13 +1,14 @@
+import axios from 'axios';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 import iziToast from 'izitoast';
 import 'izitoast/dist/css/iziToast.min.css';
-
 document.addEventListener('DOMContentLoaded', function () {
   const searchForm = document.getElementById('searchForm');
   const searchInput = document.getElementById('searchInput');
   const gallery = document.getElementById('gallery');
   const loader = document.getElementById('loader');
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
   const apiKey = '41927484-8453b2dd3e18520885b5ece2f';
   const apiUrl = 'https://pixabay.com/api/';
   let page = 1;
@@ -24,6 +25,9 @@ document.addEventListener('DOMContentLoaded', function () {
     gallery.appendChild(fragment);
     lightbox.refresh();
     hideLoader();
+
+    const hasMoreImages = images.length === 40;
+    toggleLoadMoreBtn(hasMoreImages);
   }
 
   function createCard(image) {
@@ -56,22 +60,28 @@ document.addEventListener('DOMContentLoaded', function () {
     return card;
   }
 
-  function searchImages(query, page) {
-    return new Promise(function (resolve, reject) {
+  async function searchImages(query, page) {
+    try {
       showLoader();
-      fetch(
+      const response = await fetch(
         `${apiUrl}?key=${apiKey}&q=${query}&image_type=photo&orientation=horizontal&safesearch=true&page=${page}&per_page=40`
-      )
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(data => resolve(data.hits))
-        .catch(error => reject(error))
-        .finally(() => hideLoader());
-    });
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.hits;
+    } catch (error) {
+      console.error('Error fetching images:', error);
+      showErrorMessage(
+        'An error occurred while fetching images. Please try again later.'
+      );
+      throw error;
+    } finally {
+      hideLoader();
+    }
   }
 
   function showLoader() {
@@ -89,28 +99,42 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  searchForm.addEventListener('submit', function (event) {
+  function toggleLoadMoreBtn(show) {
+    loadMoreBtn.style.display = show ? 'block' : 'none';
+  }
+
+  searchForm.addEventListener('submit', async function (event) {
     event.preventDefault();
     const query = searchInput.value.trim();
 
     if (query !== '') {
       gallery.innerHTML = '';
-      searchImages(query, page)
-        .then(function (images) {
-          if (images.length === 0) {
-            showErrorMessage(
-              'Sorry, there are no images matching your search query. Please try again!'
-            );
-          } else {
-            renderGallery(images);
-          }
-        })
-        .catch(function (error) {
-          console.error('Error fetching images:', error);
+      try {
+        const images = await searchImages(query, page);
+
+        if (images.length === 0) {
           showErrorMessage(
-            'An error occurred while fetching images. Please try again later.'
+            'Sorry, there are no images matching your search query. Please try again!'
           );
-        });
+        } else {
+          renderGallery(images);
+        }
+      } catch (error) {}
     }
+  });
+
+  loadMoreBtn.addEventListener('click', async function () {
+    page++;
+    const query = searchInput.value.trim();
+
+    try {
+      const images = await searchImages(query, page);
+
+      if (images.length > 0) {
+        renderGallery(images);
+      } else {
+        toggleLoadMoreBtn(false);
+      }
+    } catch (error) {}
   });
 });
