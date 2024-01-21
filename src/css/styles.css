@@ -75,3 +75,13 @@ img {
   height: auto;
   cursor: pointer;
 }
+.btn-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.load-more-button {
+  display: none;
+  width: 100px;
+  height: 30px;
+}
