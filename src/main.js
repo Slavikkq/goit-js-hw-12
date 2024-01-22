@@ -63,16 +63,19 @@ document.addEventListener('DOMContentLoaded', function () {
   async function searchImages(query, page) {
     try {
       showLoader();
-      const response = await fetch(
-        `${apiUrl}?key=${apiKey}&q=${query}&image_type=photo&orientation=horizontal&safesearch=true&page=${page}&per_page=40`
-      );
+      const response = await axios.get(apiUrl, {
+        params: {
+          key: apiKey,
+          q: query,
+          image_type: 'photo',
+          orientation: 'horizontal',
+          safesearch: true,
+          page: page,
+          per_page: 40,
+        },
+      });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.hits;
+      return response.data.hits;
     } catch (error) {
       console.error('Error fetching images:', error);
       showErrorMessage(
@@ -109,6 +112,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (query !== '') {
       gallery.innerHTML = '';
+      page = 1;
       try {
         const images = await searchImages(query, page);
 
